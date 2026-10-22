@@ -26,7 +26,7 @@ target `linux/arm64`. Build the applications sequentially on the 2-core VPS.
 PostgreSQL 18 and Redis are separate for each service, with persistent volumes
 and private data networks. No database or Redis port is published.
 
-Sub2API runs in standard mode. The ordinary user `mozia-newapi` is the dedicated
+Sub2API runs in standard mode. The ordinary user `Mozia-TokenPower` is the dedicated
 New API upstream identity, with separate OpenAI and Anthropic model API keys.
 It is restricted to `openai-default` and `anthropic-default`, starts with an
 owner-authorized USD 1,000 internal balance, and has an aggregate concurrency
@@ -40,6 +40,12 @@ are stored in `/opt/mozia/secrets/newapi-upstream.json` (root, mode 0600), outsi
 Git. The previous administrator-owned integration keys are retired after the
 new credentials pass verification. Its management port is loopback-only, as is
 New API until HTTPS is configured.
+
+The public brand is configured through New API's native `SystemName=TokenPower`
+and `Logo=/tokenpower-logo-v1.png` settings. The generated transparent logo is
+served from the embedded frontend assets. Upstream attribution is retained.
+The service user's login email is `mozia-tokenpower@example.com`; its generated
+password is in the protected `newapi-upstream.json` file above.
 
 ```sh
 ssh -N -L 13000:127.0.0.1:3000 -L 18080:127.0.0.1:8080 qiniu-sg
