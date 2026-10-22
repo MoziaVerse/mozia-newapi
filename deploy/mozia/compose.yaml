@@ -22,7 +22,7 @@ services:
       REDIS_CONN_STRING: redis://newapi-redis:6379/0
       SESSION_SECRET: ${NEWAPI_SESSION_SECRET:?required}
       SESSION_COOKIE_SECURE: ${HTTPS_ENABLED:-false}
-      SESSION_COOKIE_TRUSTED_URL: ${NEWAPI_ORIGIN:-http://localhost:13000}
+      SESSION_COOKIE_TRUSTED_URL: ${NEWAPI_ORIGIN:-}
       TRUSTED_PROXIES: 10.89.0.0/24
       TZ: Asia/Shanghai
       DEFAULT_LANGUAGE: zh-CN
