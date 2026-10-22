@@ -19,7 +19,9 @@ docker compose --env-file /opt/mozia/secrets/stack.env ps
 docker compose --env-file /opt/mozia/secrets/stack.env up -d --no-build
 ```
 
-Images use the source commit as their tag and an OCI revision label. Builds
+Images use the source commit as their tag and an OCI revision label. New API's
+`VERSION` build argument also records the commit in its UI/API version field;
+the upstream repository's `VERSION` file is empty outside release builds. Builds
 target `linux/arm64`. Build the applications sequentially on the 2-core VPS.
 PostgreSQL 18 and Redis are separate for each service, with persistent volumes
 and private data networks. No database or Redis port is published.
@@ -66,7 +68,7 @@ git push origin mozia
 Never force-push `main` or overwrite the deployment branch with upstream.
 On the server, fast-forward each `mozia` checkout, build fresh images tagged
 with their commits, then update `NEWAPI_IMAGE`, `SUB2API_IMAGE` and
-`SUB2API_REVISION` in the runtime env file and recreate the services.
+`NEWAPI_REVISION`, `SUB2API_REVISION` in the runtime env file and recreate the services.
 Keep the previous images and take database backups before an upgrade.
 Database migrations may prevent an image-only downgrade.
 

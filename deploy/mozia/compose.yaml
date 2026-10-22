@@ -15,6 +15,10 @@ services:
     build:
       context: ../..
       platforms: [linux/arm64]
+      args:
+        VERSION: ${NEWAPI_REVISION:?required}
+      labels:
+        org.opencontainers.image.revision: ${NEWAPI_REVISION:?required}
     ports: ["127.0.0.1:3000:3000"]
     volumes: [newapi-data:/data]
     environment:
@@ -52,6 +56,8 @@ services:
         GOPROXY: https://proxy.golang.org,direct
         GOSUMDB: sum.golang.org
         COMMIT: ${SUB2API_REVISION:?required}
+      labels:
+        org.opencontainers.image.revision: ${SUB2API_REVISION:?required}
     ports: ["127.0.0.1:8080:8080"]
     volumes: [sub2api-data:/app/data]
     environment:
