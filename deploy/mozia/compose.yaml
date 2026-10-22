@@ -1,0 +1,180 @@
+name: mozia
+
+x-common: &common
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  newapi:
+    <<: *common
+    image: ${NEWAPI_IMAGE:?Set the image built from the mozia commit}
+    build:
+      context: ../..
+      platforms: [linux/arm64]
+    ports: ["127.0.0.1:3000:3000"]
+    volumes: [newapi-data:/data]
+    environment:
+      SQL_DSN: postgresql://newapi:${NEWAPI_DB_PASSWORD:?required}@newapi-postgres:5432/newapi?sslmode=disable
+      REDIS_CONN_STRING: redis://newapi-redis:6379/0
+      SESSION_SECRET: ${NEWAPI_SESSION_SECRET:?required}
+      SESSION_COOKIE_SECURE: ${HTTPS_ENABLED:-false}
+      SESSION_COOKIE_TRUSTED_URL: ${NEWAPI_ORIGIN:-http://localhost:13000}
+      TRUSTED_PROXIES: 10.89.0.0/24
+      TZ: Asia/Shanghai
+      DEFAULT_LANGUAGE: zh-CN
+      ERROR_LOG_ENABLED: "true"
+      BATCH_UPDATE_ENABLED: "true"
+      NODE_NAME: mozia-sg-1
+      SQL_MAX_OPEN_CONNS: "20"
+      SQL_MAX_IDLE_CONNS: "5"
+    depends_on:
+      newapi-postgres: {condition: service_healthy}
+      newapi-redis: {condition: service_healthy}
+    networks: [gateway, newapi-data]
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O /dev/null http://localhost:3000/api/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  sub2api:
+    <<: *common
+    image: ${SUB2API_IMAGE:?Set the image built from the mozia commit}
+    build:
+      context: ../../../mozia-sub2api
+      platforms: [linux/arm64]
+      args:
+        GOPROXY: https://proxy.golang.org,direct
+        GOSUMDB: sum.golang.org
+        COMMIT: ${SUB2API_REVISION:?required}
+    ports: ["127.0.0.1:8080:8080"]
+    volumes: [sub2api-data:/app/data]
+    environment:
+      AUTO_SETUP: "true"
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8080"
+      SERVER_MODE: release
+      RUN_MODE: simple
+      SIMPLE_MODE_CONFIRM: "true"
+      DATABASE_HOST: sub2api-postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USER: sub2api
+      DATABASE_PASSWORD: ${SUB2API_DB_PASSWORD:?required}
+      DATABASE_DBNAME: sub2api
+      DATABASE_SSLMODE: disable
+      DATABASE_MAX_OPEN_CONNS: "20"
+      DATABASE_MAX_IDLE_CONNS: "5"
+      REDIS_HOST: sub2api-redis
+      REDIS_PORT: "6379"
+      REDIS_POOL_SIZE: "64"
+      REDIS_MIN_IDLE_CONNS: "5"
+      ADMIN_EMAIL: ${SUB2API_ADMIN_EMAIL:?required}
+      ADMIN_PASSWORD: ${SUB2API_ADMIN_PASSWORD:?required}
+      JWT_SECRET: ${SUB2API_JWT_SECRET:?required}
+      TOTP_ENCRYPTION_KEY: ${SUB2API_TOTP_KEY:?required}
+      SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS: "false"
+      SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP: "false"
+      TZ: Asia/Shanghai
+    depends_on:
+      sub2api-postgres: {condition: service_healthy}
+      sub2api-redis: {condition: service_healthy}
+    networks: [gateway, sub2api-data]
+    healthcheck:
+      test: [CMD, wget, -q, -T, "5", -O, /dev/null, "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
+  newapi-postgres:
+    <<: *common
+    image: ${POSTGRES_IMAGE:-postgres:18-alpine}
+    environment:
+      POSTGRES_USER: newapi
+      POSTGRES_PASSWORD: ${NEWAPI_DB_PASSWORD:?required}
+      POSTGRES_DB: newapi
+    command: [postgres, -c, max_connections=40, -c, shared_buffers=128MB]
+    volumes: [newapi-postgres:/var/lib/postgresql]
+    networks: [newapi-data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U newapi -d newapi"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  sub2api-postgres:
+    <<: *common
+    image: ${POSTGRES_IMAGE:-postgres:18-alpine}
+    environment:
+      POSTGRES_USER: sub2api
+      POSTGRES_PASSWORD: ${SUB2API_DB_PASSWORD:?required}
+      POSTGRES_DB: sub2api
+    command: [postgres, -c, max_connections=40, -c, shared_buffers=128MB]
+    volumes: [sub2api-postgres:/var/lib/postgresql]
+    networks: [sub2api-data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U sub2api -d sub2api"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  newapi-redis:
+    <<: *common
+    image: ${REDIS_IMAGE:-redis:8-alpine}
+    command: [redis-server, --appendonly, "yes", --maxmemory, 256mb, --maxmemory-policy, noeviction]
+    volumes: [newapi-redis:/data]
+    networks: [newapi-data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sub2api-redis:
+    <<: *common
+    image: ${REDIS_IMAGE:-redis:8-alpine}
+    command: [redis-server, --appendonly, "yes", --maxmemory, 256mb, --maxmemory-policy, noeviction]
+    volumes: [sub2api-redis:/data]
+    networks: [sub2api-data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  caddy:
+    <<: *common
+    profiles: [https]
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
+    ports: ["80:80", "443:443"]
+    environment:
+      NEWAPI_DOMAIN: ${NEWAPI_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [gateway]
+
+networks:
+  gateway:
+    ipam:
+      config: [{subnet: 10.89.0.0/24}]
+  newapi-data:
+    internal: true
+  sub2api-data:
+    internal: true
+
+volumes:
+  newapi-data:
+  sub2api-data:
+  newapi-postgres:
+  sub2api-postgres:
+  newapi-redis:
+  sub2api-redis:
+  caddy-data:
+  caddy-config:

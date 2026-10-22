@@ -1,0 +1,5 @@
+{$NEWAPI_DOMAIN} {
+    reverse_proxy newapi:3000 {
+        flush_interval -1
+    }
+}
