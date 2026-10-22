@@ -65,8 +65,7 @@ services:
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: "8080"
       SERVER_MODE: release
-      RUN_MODE: simple
-      SIMPLE_MODE_CONFIRM: "true"
+      RUN_MODE: standard
       DATABASE_HOST: sub2api-postgres
       DATABASE_PORT: "5432"
       DATABASE_USER: sub2api

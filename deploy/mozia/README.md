@@ -26,9 +26,20 @@ target `linux/arm64`. Build the applications sequentially on the 2-core VPS.
 PostgreSQL 18 and Redis are separate for each service, with persistent volumes
 and private data networks. No database or Redis port is published.
 
-Sub2API uses its upstream-supported simple mode: account scheduling and API
-authentication remain there; customer accounts and charging belong to New API.
-Its management port is loopback-only, as is New API until HTTPS is configured.
+Sub2API runs in standard mode. The ordinary user `mozia-newapi` is the dedicated
+New API upstream identity, with separate OpenAI and Anthropic model API keys.
+It is restricted to `openai-default` and `anthropic-default`, starts with an
+owner-authorized USD 1,000 internal balance, and has an aggregate concurrency
+limit of 10. This is internal accounting credit, not a payment or customer funds.
+Customer accounts and customer-facing charging remain in New API.
+
+Standard mode checks and deducts the service user's balance; monitor and refill
+it before it runs out. Keep upstream accounts assigned to the corresponding
+groups. Public registration stays disabled. The service user's login and keys
+are stored in `/opt/mozia/secrets/newapi-upstream.json` (root, mode 0600), outside
+Git. The previous administrator-owned integration keys are retired after the
+new credentials pass verification. Its management port is loopback-only, as is
+New API until HTTPS is configured.
 
 ```sh
 ssh -N -L 13000:127.0.0.1:3000 -L 18080:127.0.0.1:8080 qiniu-sg
