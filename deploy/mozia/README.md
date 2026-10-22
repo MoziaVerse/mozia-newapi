@@ -42,7 +42,7 @@ new credentials pass verification. Its management port is loopback-only, as is
 New API until HTTPS is configured.
 
 The public brand is configured through New API's native `SystemName=TokenPower`
-and `Logo=/tokenpower-logo-v1.png` settings. The generated transparent logo is
+and `Logo=/tokenpower-logo-v2.png` settings. The generated transparent logo is
 served from the embedded frontend assets. Upstream attribution is retained.
 The service user's login email is `mozia-tokenpower@example.com`; its generated
 password is in the protected `newapi-upstream.json` file above.
